@@ -50,7 +50,7 @@ They describe what agents are, not what they should do.
 
 Truths are:
 
-- Independent of role, domain, or agent type (human or AI)
+- Independent of role, domain, or agent type (human or artificial)
 - The foundation that Values, Roles, and Skills must account for
 
 Truths are not:
