@@ -71,7 +71,7 @@ Actions have effects on the world and the agent.
 
 **T-3: Input Duality**
 
-The model responds to input from the world and the agent.
+An agent's model responds to input from the world and the agent.
 
 **T-4: Model Fallibility**
 
