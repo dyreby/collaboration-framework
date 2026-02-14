@@ -1,7 +1,7 @@
 # ADR-01: Truth Layer
 
 - **Status:** Accepted
-- **Date:** 2026-02-13
+- **Date:** 2026-02-14
 - **RFC:** [RFC-01](../rfcs/rfc-01-truth-layer.md)
 
 ## Context
