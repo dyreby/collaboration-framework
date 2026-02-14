@@ -1,6 +1,6 @@
 # RFC-01: Truth Layer
 
-- **Status:** Accepted
+- **Status:** Accepted (structural language superseded by RFC-02)
 - **Created:** 2026-02-12
 
 ## Summary
