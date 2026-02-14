@@ -1,6 +1,6 @@
 # RFC-01: Truth Layer
 
-- **Status:** Draft
+- **Status:** Accepted
 - **Created:** 2026-02-12
 
 ## Summary
