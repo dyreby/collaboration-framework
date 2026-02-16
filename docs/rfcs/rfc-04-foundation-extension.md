@@ -45,35 +45,35 @@ With this claim, the derivation follows: since models are always incomplete, and
 **T-1: Objective-Driven Action** (unchanged)
 Agents act from internal objectives.
 
-**T-2: World Model** (unchanged)
+**T-2: Imperfect World Model** (unchanged)
 Agents have internal world models that are incomplete, fallible, and mutable.
 
-**T-3: Model Complexity** (new)
-More complex models require more input.
-
-- A model with more parts needs more information to be useful
-- This is definitional, not learned experience
-- Combined with T-2 (incompleteness), simpler models are structurally advantaged
-
-**T-4: Model-Objective Bridge** (new)
+**T-3: Model-Driven Action** (new)
 Agents use their world models to select actions in pursuit of objectives.
 
 - Connects T-1 (objectives) to T-2 (world models)
 - Enables derivation: better model → better action selection → higher objective achievement
 - This is structural, not opinion
 
-**T-5: Input Distinction** (renumbered from T-3)
+**T-4: Input Distinction** (renumbered from T-3)
 World input and model-derived conclusions are distinct. World input is taken as given.
+
+**T-5: Model Complexity** (new)
+More complex models require more input.
+
+- A model with more parts needs more information to be useful
+- This is definitional, not learned experience
+- Combined with T-2 (incompleteness), simpler models are structurally advantaged
 
 ### What Changed from RFC-03
 
 | RFC-03 | RFC-04 | Rationale |
 |--------|--------|-----------|
 | T-1: Objectives | T-1: Objectives | Unchanged |
-| T-2: World Model | T-2: World Model | Unchanged |
-| — | T-3: Model Complexity | New; enables "simpler is better" as structural consequence |
-| — | T-4: Model-Objective Bridge | New; connects objectives to world models |
-| T-3: Input Distinction | T-5: Input Distinction | Renumbered |
+| T-2: World Model | T-2: Imperfect World Model | Unchanged |
+| — | T-3: Model-Driven Action | New; connects objectives to world models |
+| T-3: Input Distinction | T-4: Input Distinction | Renumbered |
+| — | T-5: Model Complexity | New; enables "simpler is better" as structural consequence |
 
 ### Derived Consequences
 
@@ -82,17 +82,17 @@ These truths enable structural derivations:
 **"Better model → better outcomes"**
 - T-1: Agent has objectives
 - T-2: Agent has (incomplete, fallible) world model
-- T-4: Agent uses model to select actions in pursuit of objectives
+- T-3: Agent uses model to select actions in pursuit of objectives
 - Derivation: More accurate model → better predictions → better action selection → higher probability of achieving objectives
 
 **"Simpler models are more robust"**
 - T-2: Models are always incomplete
-- T-3: Complex models require more input
+- T-5: Complex models require more input
 - Derivation: Since you never have complete information, models that require less information are more robust
 
 **"Simplicity is structural advantage"**
 - Follows from above
-- Not a preference or principle — a consequence of T-2 + T-3
+- Not a preference or principle — a consequence of T-2 + T-5
 
 ### Encoding for LLM Context
 
@@ -105,11 +105,11 @@ T-1: Agents act from internal objectives.
 
 T-2: Agents have internal world models that are incomplete, fallible, and mutable.
 
-T-3: More complex models require more input.
+T-3: Agents use their world models to select actions in pursuit of objectives.
 
-T-4: Agents use their world models to select actions in pursuit of objectives.
+T-4: World input and model-derived conclusions are distinct. World input is taken as given.
 
-T-5: World input and model-derived conclusions are distinct. World input is taken as given.
+T-5: More complex models require more input.
 ```
 
 ## Discussion
@@ -128,12 +128,12 @@ You could argue it's implied — why else would agents have world models if not 
 
 The logical flow is:
 1. Agents have objectives (why they act)
-2. Agents have world models (what they work with)
-3. Complex models need more input (property of models)
-4. Agents use models to pursue objectives (how 1 and 2 connect)
-5. Input and conclusions are distinct (epistemic strategy)
+2. Agents have imperfect world models (what they work with)
+3. Agents use models to pursue objectives (how 1 and 2 connect)
+4. Input and conclusions are distinct (epistemic grounding)
+5. Complex models need more input (complexity property)
 
-T-3 and T-4 could swap, but T-3 before T-4 groups model properties (T-2, T-3) before the bridge (T-4).
+T-3 immediately after T-2 connects objectives to models. T-4 establishes epistemic grounding. T-5 states the complexity property that, combined with T-2, yields the simplicity derivation.
 
 ## Migration
 

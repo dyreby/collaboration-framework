@@ -24,35 +24,35 @@ Extend the Foundation from three Truths to five, adding:
 **T-1: Objective-Driven Action**
 Agents act from internal objectives.
 
-**T-2: World Model**
+**T-2: Imperfect World Model**
 Agents have internal world models that are incomplete, fallible, and mutable.
 
-**T-3: Model Complexity**
-More complex models require more input.
-
-**T-4: Model-Objective Bridge**
+**T-3: Model-Driven Action**
 Agents use their world models to select actions in pursuit of objectives.
 
-**T-5: Input Distinction**
+**T-4: Input Distinction**
 World input and model-derived conclusions are distinct. World input is taken as given.
+
+**T-5: Model Complexity**
+More complex models require more input.
 
 ### Migration from ADR-03
 
 | ADR-03 | ADR-04 | Rationale |
 |--------|--------|-----------|
 | T-1: Objectives | T-1: Objectives | Unchanged |
-| T-2: World Model | T-2: World Model | Unchanged |
-| — | T-3: Model Complexity | New; enables "simpler is better" as derivation |
-| — | T-4: Model-Objective Bridge | New; connects objectives to world models |
-| T-3: Input Distinction | T-5: Input Distinction | Renumbered |
+| T-2: World Model | T-2: Imperfect World Model | Unchanged |
+| — | T-3: Model-Driven Action | New; connects objectives to world models |
+| T-3: Input Distinction | T-4: Input Distinction | Renumbered |
+| — | T-5: Model Complexity | New; enables "simpler is better" as derivation |
 
 ### Key Derivations Now Possible
 
 **"Better model → better outcomes"**
-- T-1 + T-2 + T-4 → more accurate model leads to better action selection
+- T-1 + T-2 + T-3 → more accurate model leads to better action selection
 
 **"Simpler models are more robust"**
-- T-2 + T-3 → since models are always incomplete, simpler models require less to be useful
+- T-2 + T-5 → since models are always incomplete, simpler models require less to be useful
 
 These are now structural consequences, not principles or opinions.
 
