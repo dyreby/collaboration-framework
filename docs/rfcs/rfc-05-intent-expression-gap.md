@@ -20,7 +20,7 @@ Users know what they want — by definition, intent is theirs. But their *expres
 This is a distinct structural claim, not derivable from existing truths:
 - T-2 says the agent's world model is imperfect
 - T-5 says users fill the gap with context
-- **Neither** says that user-provided context is itself a lossy signal
+- **Neither** says that user-provided *intent expression* is a lossy signal — lossy in a different way than model-derived conclusions. World state (files, repo content) can be taken as given; user expression of what they want cannot
 
 ### The XY Problem
 
@@ -66,6 +66,7 @@ Users communicate intent imperfectly. Agents must infer intent from expression, 
 **"Pushback can be correct"**
 - T-6: Users can be wrong about how to express what they want
 - Derivation: An agent that says "you asked for Y, but it sounds like you want X — is that right?" is doing its job
+- The more world context the agent has (files, repo state, prior conversation), the better it can recognize XY situations — "given what I see in your codebase, you might mean..."
 
 **"Solutions ≠ goals"**
 - T-6: Users often describe solutions (Y) when they have goals (X)
@@ -96,9 +97,17 @@ T-6: Users communicate intent imperfectly. Agents must infer intent from express
 
 You might argue this follows from T-2 (imperfect world models) — if user input feeds the model, and models are imperfect, user input is imperfectly processed.
 
-But that misses the point. T-6 claims something specific: **the input itself is lossy**, not just the processing. Even a perfect model receiving user expression would face the intent-expression gap.
+But that misses the point. T-6 claims something specific: **user intent expression is lossy**, not just the processing. Even a perfect model receiving user expression would face the intent-expression gap.
+
+To be precise: "input" here means user-provided prompting that expresses a desired outcome. World state — file content, repo structure, website content — is not lossy in this sense. It can be taken as given and used *to resolve* lossy intent expression.
 
 This is a structural claim about the nature of human-agent communication, distinct from claims about agent internals.
+
+### This isn't unique to agents
+
+The intent-expression gap exists in human-human communication too. A developer asks a colleague "how do I parse JSON in bash?" — but they actually need to extract one field from an API response. The colleague might answer the literal question (jq, sed gymnastics) or recognize the XY problem and ask "what are you actually trying to get?"
+
+Agents face this same dynamic. The difference: agents can be *designed* to look for it.
 
 ### Doesn't this make agents second-guess everything?
 
