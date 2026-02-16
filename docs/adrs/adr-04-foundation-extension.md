@@ -1,7 +1,7 @@
 # ADR-04: Foundation Extension
 
 - **Status:** Accepted
-- **Date:** 2026-02-15
+- **Date:** 2026-02-16
 - **RFC:** [RFC-04](../rfcs/rfc-04-foundation-extension.md)
 - **Extends:** ADR-03 (Foundation Revision)
 
