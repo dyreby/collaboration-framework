@@ -31,6 +31,8 @@ Some things I take for granted — presuppositions that aren't worth encoding be
 - Physics is consistent at the scale we operate.
 - An agent is an entity capable of acting in the world.
 
+(These are models too. Non-duality questions distinct existence; quantum mechanics questions classical consistency. I assume them because they're useful at the scale this framework operates — not because they're ultimately true.)
+
 From there, I can state truths that apply to me and an LLM-based agent alike:
 
 - Agents act from internal objectives.
