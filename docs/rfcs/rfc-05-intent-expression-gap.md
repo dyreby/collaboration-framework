@@ -120,7 +120,6 @@ An agent with strong pre-encoded understanding (T-5) still needs to infer intent
 
 - This RFC extends RFC-04 (assumes T-1 through T-5)
 - ADR-05 will reference this RFC
-- Version increments to v0.4.0
 
 ## References
 
