@@ -1,6 +1,6 @@
 # RFC-03: Foundation Revision
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Created:** 2026-02-15
 - **Supersedes:** RFC-01 (Truths)
 
