@@ -50,19 +50,21 @@ Location: `docs/rfcs/`
 
 RFCs propose significant changes:
 
-- Foundation or core changes
+- Foundation, Core, or Shell structural changes
 - Governance process changes
-- New tool integrations
 
 Routine additions to Roles, Skills, and Profiles can go through regular PRs.
 
 **Lifecycle:**
 
-1. Draft RFC via pull request
+1. Open pull request with RFC file
 2. Discussion in PR comments
 3. Revise based on feedback
 4. Merge with `Status: Accepted`
 5. Create corresponding ADR
+
+RFCs are immutable once merged.
+To supersede an RFC, create a new RFC that declares what it supersedes.
 
 **Format:** `rfc-NN-short-title.md`
 
@@ -74,9 +76,15 @@ ADRs record accepted decisions.
 They are the permanent ledger of architectural commitments.
 
 ADRs are immutable.
-To change a decision, create a new ADR that supersedes the previous one.
+To change a decision, create a new ADR that declares what it supersedes.
 
 **Format:** `adr-NN-short-title.md`
+
+### Workflow
+
+**For RFCs:** Open a pull request with the RFC file. Discussion happens in the PR.
+
+**For other changes:** Discuss in an issue first. Open a pull request once the approach is settled. (PRs to demonstrate or prototype during discussion are fine — link them from the issue.)
 
 ### Pull Requests
 
