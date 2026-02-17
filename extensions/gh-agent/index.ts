@@ -14,7 +14,7 @@
 import { createBashTool } from "@mariozechner/pi-coding-agent";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { readConfig, getSetupCommand } from "./config.ts";
-import { executeGhCommand, type GhCommandContext } from "./gh-command.ts";
+import { executeGhCommand, containsGhCommand, type GhCommandContext } from "./gh-command.ts";
 
 export default function (pi: ExtensionAPI) {
   const ghCtx: GhCommandContext = {
@@ -56,7 +56,7 @@ export default function (pi: ExtensionAPI) {
     async execute(id, params, signal, onUpdate, ctx) {
       const { command } = params as { command: string };
 
-      if (command.trim().startsWith("gh ")) {
+      if (containsGhCommand(command)) {
         return executeGhCommand(command, ghCtx, signal);
       }
 
