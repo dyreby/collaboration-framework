@@ -310,6 +310,8 @@ Two required fields:
 - **model**: Which LLM generated this profile
 - **generated**: When it was generated
 
+Additional fields can be added if useful to your workflow (thinking level, temperature, source concepts, etc.)—the framework doesn't restrict this.
+
 This makes profiles self-contained and useful to everyone—no git archaeology needed to know when and how they were generated. The metadata is included in context when the profile is loaded, which can be useful when iterating on profiles.
 
 **Concepts don't need this.** They're human-authored and processed during profile generation—not loaded directly at runtime. There's no "which model made this?" question because you wrote them. This is a key difference: concepts are source material; profiles are runtime artifacts.
