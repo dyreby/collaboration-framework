@@ -1,4 +1,4 @@
-# RFC-06: Collaborative Vocabulary
+# RFC-06: Alignment on Intent
 
 - **Status:** Draft
 - **Created:** 2026-02-17
@@ -45,13 +45,13 @@ If human verification is always required, we don't need the agent to perfectly i
 2. **Deterministic application** of that understanding
 3. **Feedback mechanisms** to refine understanding over time
 
-### Reframe: Worldview Modeling
+### Reframe: Alignment on Intent
 
-What we're really encoding is a **worldview model**—how you think about problems within a scope—in a way that lets your agent collaborate with you as any human colleague would.
+What we're really building is a framework for **aligning on intent**—encoding how you think collaboration should work for a given role, in a way that both agents and humans can understand.
 
-There will always be misalignment in collaboration because of T-6. What this framework provides is a way to **encode, refine, and share** that worldview so misalignment becomes legible and correctable.
+There will always be misalignment in collaboration because of T-6. What this framework provides is a way to **encode, refine, and share** your intent so misalignment becomes legible and correctable.
 
-The agent doesn't follow your rules. The agent *shares your understanding* and collaborates from that common ground.
+The artifacts serve both audiences. An LLM loads your role as context; a human collaborator reads the same file to understand what you care about. The vocabulary is documentation of how you think—useful whether the reader is silicon or carbon.
 
 ## Proposal
 
@@ -211,6 +211,16 @@ Terms and roles can be shared, like AGENTS.md explains a codebase.
 - **Infer patterns**: An LLM can read your vocabulary and infer "how John works"
 
 This creates a new kind of collaboration artifact. Not just "here's my code" but "here's how I think about code."
+
+The files aren't just LLM context—they're readable documentation. A human reviewing your roles learns the same things an agent would: what you prioritize, how you want to engage, what matters to you in this context.
+
+### Silence as Permission
+
+Vocabulary captures what matters. What isn't mentioned has no preference.
+
+If your code-reviewer role specifies "focus on correctness and maintainability" but says nothing about formatting, that's signal: formatting isn't something you care about for this role. The collaborator (human or agent) can use their judgment.
+
+This makes the vocabulary tractable. You don't need to specify everything—only what you'd push back on if it went differently. Silence is permission to proceed as the collaborator sees fit.
 
 ### Feedback Loops
 
