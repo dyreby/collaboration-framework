@@ -1,6 +1,6 @@
 # RFC-06: Alignment on Intent
 
-- **Status:** Draft
+- **Status:** Accepted
 - **Created:** 2026-02-17
 - **Extends:** RFC-05 (Intent-Expression Gap)
 - **Issue:** #47
@@ -105,13 +105,11 @@ Defensive code degrades gracefully and aids debugging.
 - Consider what happens if this file doesn't exist
 ```
 
-**`[[concept]]` references** link to other concepts. Tooling resolves these at profile generation—`[[defensive]]` loads `concepts/defensive.md` and processes it.
+**`[[concept]]` references** link to other concepts—`[[defensive]]` references `concepts/defensive.md`.
 
-**`@profile` references** link to generated profiles. Tooling includes these as-is—`@defensive` includes `profiles/defensive.md` directly.
+**`@profile` references** link to generated profiles—`@defensive` references `profiles/defensive.md`.
 
-The difference:
-- `[[concept]]` → processed by LLM during generation
-- `@profile` → included verbatim (already generated, already validated)
+Profile generation is deterministic: extract all references, dedupe, then include each verbatim before the profile-specific context.
 
 Concepts can be as rich as needed. Write whatever helps capture your intent—principles, rationale, examples, edge cases, notes. There's no token budget; this is documentation of what you believe.
 
@@ -330,7 +328,7 @@ Everyone using this framework agrees:
 - **Users** can't know if what was written is missing context the author would have caught
 - **Even the author** doesn't know if they encoded their intent correctly
 
-This isn't a flaw. It's the nature of collaboration under T-6. The framework doesn't fix this—it makes it legible and workable.
+This isn't a flaw. It's the nature of collaboration under T-6. The framework doesn't fix this—it makes it legible and workable, and every collaboration, whether human-to-agent or human-to-human, is a data point for refining alignment.
 
 ### What You Can Do
 
