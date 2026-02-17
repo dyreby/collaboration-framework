@@ -14,7 +14,12 @@ Introduce a **collaborative vocabulary infrastructure** for encoding worldview m
 
 Users define terms and roles, then work with their preferred LLM to generate context contracts. At runtime, users load specific roles or terms—the agent collaborates from shared understanding, not instructions.
 
-This vocabulary is shareable. Like AGENTS.md explains how a codebase works, your terms and roles explain how *you* work—others (human or agent) can adopt them.
+This vocabulary is shareable. Like AGENTS.md explains how a codebase works, your terms and roles explain how you think about the concepts you care about—others (human or agent) can adopt them. But misalignment exists on both sides of the text:
+
+- Between your intent and your recorded words
+- Between your recorded words and how others interpret them
+
+Contracts align understanding; they can only ever be useful, never right.
 
 The framework is **useful, not true**. It doesn't claim to correctly capture intent—T-6 makes that impossible. It provides a model for encoding intent as clearly as possible, with honest boundaries about what's known and what isn't. What you encode is up to you.
 
