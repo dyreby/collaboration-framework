@@ -1,0 +1,296 @@
+# RFC-06: Profiles
+
+- **Status:** Draft
+- **Created:** 2026-02-17
+- **Extends:** RFC-05 (Intent-Expression Gap)
+- **Issue:** #47
+
+## Summary
+
+Introduce **Profiles** as validated contracts that encode shared understanding between users and agents. Profiles are authored collaboratively with LLMs at build-time, validated by humans, and committed to the repository—creating a deterministic, auditable orientation layer.
+
+## Motivation
+
+RFC-05 establishes T-6: expressed intent is lossy. The agent must infer intent from expression. But how?
+
+Previous approaches attempted to solve this with layered abstractions—principles, skills, guidelines—that the agent interprets at runtime. This is fundamentally indeterminate. The same words can be synthesized differently across invocations, models, or contexts. Testing is impossible because interpretation is opaque.
+
+### The Invariant
+
+Consider the limit case: perfect LLMs with complete knowledge. Even then, the human remains essential. Why?
+
+**The human is the only authority who can verify that the observed result of an action, as they interpret it, matches their original intention.**
+
+This is irreducible. Intent originates in the human. Expression is lossy (T-6). Action produces observable results. Only the human can close the loop—"yes, this is what I meant."
+
+### Implication
+
+If human verification is always required, we don't need the agent to perfectly interpret intent at runtime. We need:
+
+1. **Shared understanding** of what matters before action
+2. **Deterministic application** of that understanding
+3. **Feedback mechanisms** to refine understanding over time
+
+The agent doesn't guess what you mean. You establish what you mean together, commit it, and the agent applies it consistently.
+
+## Proposal
+
+### Profiles
+
+A **Profile** is a validated contract that captures shared understanding between user and agent. It serves as the lens through which the agent interprets user prompts.
+
+Profiles encode:
+- **Principles**: What the user believes (values, priorities)
+- **Processes**: How the user works (workflows, conventions)
+- **Roles**: What the user expects from the agent (persona, expertise)
+
+```yaml
+id: rust-pedantic
+description: "Careful Rust development with emphasis on correctness"
+terms:
+  - defensive
+  - no-panic
+  - prefer-result
+  - explicit-errors
+  - functional-core
+context: |
+  # Orientation
+  
+  You are assisting with Rust development. Prioritize correctness over convenience.
+  
+  ## Error Handling
+  - Use Result, not panic. Panics are for unrecoverable states only.
+  - Surface errors explicitly; never swallow them.
+  - Validate inputs at boundaries.
+  
+  ## Style
+  - Prefer functional core, imperative shell.
+  - Make invalid states unrepresentable through types.
+  ...
+```
+
+The `context` field is the actual text prepended to the system prompt. It's generated with LLM assistance but validated and committed by the human.
+
+### Terms
+
+Profiles are composed from **Terms**—atomic units of intent with a name and natural language definition.
+
+```yaml
+id: defensive
+means: "Anticipate failure modes. Handle errors explicitly, surfacing them rather than swallowing. Don't assume inputs are valid."
+```
+
+Terms are the shared vocabulary. When you say "defensive," both you and the agent agree on what that points to.
+
+Terms can reference other terms, enabling hierarchy to emerge:
+
+```yaml
+id: defensive
+means: "Anticipate and handle failure modes explicitly"
+includes:
+  - no-panic
+  - validate-inputs
+  - surface-errors
+```
+
+### Authoring Workflow
+
+Profiles are authored collaboratively with an LLM at build-time:
+
+1. **Conversation**: User describes what they care about
+2. **Proposal**: LLM suggests terms and context
+3. **Refinement**: User iterates until it captures intent
+4. **Validation**: User reviews the generated context
+5. **Commit**: Profile is versioned in the repository
+
+```
+User: "I want careful error handling, no panics"
+LLM:  "That sounds like 'defensive'. Here's a term:
+       { id: 'no-panic', means: 'Use Result over panic. Panics are for unrecoverable states only.' }
+       Want me to add this to your rust-pedantic profile?"
+User: "Yes, and regenerate the context"
+LLM:  [generates updated context]
+User: "Looks good, commit it"
+```
+
+The LLM acts as librarian—suggesting related terms, catching duplicates, proposing hierarchy:
+
+```
+User: "I want it to always validate inputs"
+LLM:  "This relates to your existing 'defensive' term. Options:
+       (a) Add 'validate-inputs' as a term under 'defensive'
+       (b) Create standalone 'validate-inputs' term
+       (c) Both—term exists, 'defensive' references it"
+```
+
+### Runtime Behavior
+
+At runtime, Orient is deterministic:
+
+```
+Orient(profile_id) → context (text)
+```
+
+Same profile, same context, always. The LLM synthesis happened at build-time. The human validated it. Now it's just lookup.
+
+The agent receives the committed context and treats it as shared understanding—not instructions to interpret, but a contract both parties agreed to.
+
+### Feedback Loops
+
+#### Immediate (OODA)
+
+Within a session, the user observes results and provides feedback:
+- "That's not what I meant"
+- "Why did you do X instead of Y?"
+- "That's exactly right"
+
+This closes the loop for the current interaction.
+
+#### Learnable
+
+After sessions, user and LLM can reflect:
+- "Why wasn't my intent understood?"
+- "What term would have captured this?"
+- "Should we update the profile?"
+
+This refines the profile over time. The conversation history is auditable—you can trace how your understanding evolved.
+
+### Scaling with LLM Capability
+
+Every step leverages LLM capability:
+- **Authoring**: LLM helps articulate intent
+- **Curation**: LLM suggests structure, catches conflicts
+- **Generation**: LLM synthesizes terms into coherent context
+- **Reflection**: LLM helps diagnose misalignment
+
+As LLMs improve:
+- Generation requires less iteration
+- Suggestions get sharper
+- Reflection yields better insights
+
+But the invariant holds: human validates, human commits. The LLM is a collaborator, not an authority.
+
+## Data Model
+
+### Term
+
+```typescript
+type Term = {
+  id: string;                    // unique identifier
+  means: string;                 // natural language definition
+  includes?: string[];           // references to other terms (optional)
+};
+```
+
+### Profile
+
+```typescript
+type Profile = {
+  id: string;                    // unique identifier
+  description: string;           // human-readable summary
+  terms: string[];               // term ids this profile uses
+  context: string;               // generated system prompt text
+  generated_at: string;          // ISO timestamp
+  generated_from: string;        // hash of terms at generation time
+};
+```
+
+### Storage
+
+```
+.agent/
+  terms/
+    defensive.yaml
+    no-panic.yaml
+    validate-inputs.yaml
+    ...
+  profiles/
+    rust-pedantic.yaml
+    quick-prototype.yaml
+    ...
+```
+
+Profiles and terms are committed to the repository, versioned with git, diffable, auditable.
+
+## Discussion
+
+### Why not just write system prompts directly?
+
+You can. Profiles don't prevent direct authoring.
+
+But direct authoring doesn't compose. You can't say "rust + pedantic + fast-iteration" and get coherent context. You can't test that your profile includes certain constraints. You can't share terms across profiles.
+
+Profiles give you:
+- **Composition**: Combine terms into coherent wholes
+- **Reuse**: Same term in multiple profiles
+- **Testability**: Assert term presence, context properties
+- **Auditability**: Trace how understanding evolved
+
+### What about conflicts between terms?
+
+The LLM surfaces conflicts during generation. If "move-fast" and "pedantic" contradict, the LLM flags it:
+
+```
+LLM: "These terms may conflict:
+      - 'move-fast': Ship quickly, iterate later
+      - 'pedantic': Prioritize correctness over speed
+      How should I resolve this in the context?"
+```
+
+The human decides. The resolution is captured in the committed context.
+
+### How do you know a profile works?
+
+You don't—until you use it. The OODA loop provides feedback:
+1. **Observe**: See agent behavior
+2. **Orient**: Compare to expectation
+3. **Decide**: Is this aligned?
+4. **Act**: Refine profile or continue
+
+This is the same loop humans use when collaborating with other humans. The profile doesn't guarantee alignment—it establishes shared understanding that makes misalignment legible.
+
+### Isn't this just prompt engineering with extra steps?
+
+Yes, in the same way that software engineering is "just typing with extra steps."
+
+The extra steps are the point:
+- Structured vocabulary (terms)
+- Composition semantics (profiles)
+- Validation checkpoint (human review)
+- Version control (git)
+- Feedback integration (learnable loops)
+
+Raw prompts are artisanal. Profiles are engineered.
+
+### What if the taxonomy becomes unwieldy?
+
+Start small. You don't need hierarchy on day one.
+
+```yaml
+id: careful
+means: "Think before acting. Consider edge cases. Ask if uncertain."
+```
+
+That's a complete term. Hierarchy emerges when you notice patterns—"these five terms are all aspects of 'defensive.'" The LLM helps notice these patterns.
+
+If taxonomy becomes burdensome, flatten it. The human is always in control.
+
+## Migration
+
+- This RFC extends RFC-05 (builds on T-6: Intent-Expression Gap)
+- Profiles are opt-in; existing workflows continue to work
+- Tooling (term authoring, profile generation) is a separate concern
+
+## Future Work
+
+- **Tooling**: CLI for term/profile authoring with LLM assistance
+- **Sharing**: Term libraries that can be imported across projects
+- **Composition operators**: Explicit semantics for combining profiles
+- **Conflict detection**: Static analysis of term compatibility
+- **Metrics**: Track profile effectiveness over time
+
+## References
+
+- RFC-05: Intent-Expression Gap
+- Issue #47: Constrain how silence is interpreted
+- OODA Loop: Boyd's decision cycle (Observe, Orient, Decide, Act)
