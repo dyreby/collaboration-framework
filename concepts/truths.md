@@ -10,4 +10,4 @@ T-4: World input and model-derived conclusions are distinct. World input is take
 
 T-5: Required context is the gap between agent understanding and situation requirements.
 
-T-6: Expressed intent is lossy. Infer intent from expression, not treat expression as intent.
+T-6: Expressed intent is lossy. Infer intent from expression, do not treat expression as intent.
