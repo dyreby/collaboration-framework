@@ -16,9 +16,11 @@ const repoRoot = join(extensionDir, "..");
 const conceptsDir = join(repoRoot, "concepts");
 
 const PREAMBLE = `<collaboration-framework>
-This context uses concepts from the collaboration framework. When you see [[cf:name]], that references concepts/name.md—shared understanding for how that concept applies here.
+This context uses concepts from the collaboration framework.
 
-On misalignment: read the source concept and align with the user. If the concept needs refinement, propose changes.
+[[cf:name]] is a provenance marker—it means the concept "name" (from concepts/name.md) was referenced when writing this text. The marker indicates influence, not inclusion; the referenced concept's full content isn't necessarily in context.
+
+On misalignment (inferred, detected, or reported by the user): load any linked [[cf:]] concepts fully into context via /concept, then enter a concept_alignment loop with the user to resolve the gap.
 </collaboration-framework>`;
 
 export default function (pi: ExtensionAPI) {
