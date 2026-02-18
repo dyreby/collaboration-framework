@@ -4,59 +4,32 @@
  * Checks if the user is at a clean consistency boundary before session transitions.
  *
  * Handles:
- * - /new: Intercepts new session, checks boundary first
- * - /bye: Exit pi with boundary check (use instead of Ctrl+C for the guardrail)
+ * - /new: If concerns exist, surfaces them to the conversation. User and LLM
+ *   iterate until aligned, then /new again to proceed.
+ * - /bye: Same pattern for exiting pi.
  *
- * For each:
- * 1. Gathers concrete state (git status, open PRs, pending reviews)
- * 2. Asks the LLM to assess if we're at a clean boundary
- * 3. Presents the assessment and lets the user decide
- *
- * Could extend to /resume, /fork — any transition where
- * "are we at a clean stopping point?" matters.
+ * Happy path (clean state) is frictionless. Guardrails are collaborative.
  */
 
-import { complete, type Message } from "@mariozechner/pi-ai";
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { BorderedLoader, serializeConversation, convertToLlm, type SessionEntry } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
-function getAssessmentPrompt(action: "new session" | "exit"): string {
-  const actionDesc = action === "new session" 
-    ? "start a new session" 
-    : "exit";
-  
-  return `You're checking whether we're at a clean consistency boundary before the user ${actionDesc}s.
-
-A clean consistency boundary means: work is committed, PRs are resolved or in a good state, and nothing important would be lost by stopping here.
-
-Consider:
-- Uncommitted changes (provided below)
-- Open PRs with pending reviews (provided below)  
-- Any implicit understanding from our conversation that isn't captured in artifacts
-
-Give a brief, friendly assessment:
-- If we're at a clean boundary: say "Looks good — we're at a clean consistency boundary."
-- If there are concerns: mention them specifically but conversationally (e.g., "Just a heads up — you have uncommitted changes in X" or "PR #42 still has review comments to address")
-
-Keep it brief and direct. No preamble.`;
-}
-
-async function gatherState(pi: ExtensionAPI): Promise<{ gitStatus: string; openPRs: string }> {
+async function gatherState(pi: ExtensionAPI): Promise<{ gitStatus: string; openPRs: string; hasIssues: boolean }> {
   // Check git status
   const gitResult = await pi.exec("git", ["status", "--porcelain"]);
-  const gitStatus = gitResult.code === 0 && gitResult.stdout.trim()
+  const hasUncommitted = gitResult.code === 0 && gitResult.stdout.trim().length > 0;
+  const gitStatus = hasUncommitted
     ? `Uncommitted changes:\n${gitResult.stdout.trim()}`
-    : "No uncommitted changes.";
+    : "";
 
   // Check open PRs (if gh is available)
-  let openPRs = "Unable to check PRs (gh not available or not in a repo).";
+  let openPRs = "";
+  let hasOpenPRs = false;
   try {
     const prResult = await pi.exec("gh", ["pr", "list", "--author", "@me", "--state", "open", "--json", "number,title,reviewDecision,reviewRequests"]);
     if (prResult.code === 0 && prResult.stdout.trim()) {
       const prs = JSON.parse(prResult.stdout);
-      if (prs.length === 0) {
-        openPRs = "No open PRs.";
-      } else {
+      if (prs.length > 0) {
+        hasOpenPRs = true;
         const prLines = prs.map((pr: { number: number; title: string; reviewDecision: string; reviewRequests: unknown[] }) => {
           const status = pr.reviewDecision || (pr.reviewRequests?.length ? "REVIEW_REQUESTED" : "NO_REVIEW");
           return `- #${pr.number}: ${pr.title} (${status})`;
@@ -68,93 +41,27 @@ async function gatherState(pi: ExtensionAPI): Promise<{ gitStatus: string; openP
     // gh not available, that's fine
   }
 
-  return { gitStatus, openPRs };
+  return { 
+    gitStatus, 
+    openPRs, 
+    hasIssues: hasUncommitted || hasOpenPRs 
+  };
 }
 
-async function getAssessment(
-  pi: ExtensionAPI,
-  ctx: ExtensionContext,
-  state: { gitStatus: string; openPRs: string },
-  conversationSummary: string,
-  action: "new session" | "exit"
-): Promise<string | null> {
-  if (!ctx.model) {
-    return "No model available for assessment.";
-  }
-
-  return ctx.ui.custom<string | null>((tui, theme, _kb, done) => {
-    const loader = new BorderedLoader(tui, theme, "Assessing session state...");
-    loader.onAbort = () => done(null);
-
-    const doAssess = async () => {
-      const apiKey = await ctx.modelRegistry.getApiKey(ctx.model!);
-
-      const userMessage: Message = {
-        role: "user",
-        content: [{
-          type: "text",
-          text: `## Current State
-
-${state.gitStatus}
-
-${state.openPRs}
-
-## Conversation Summary (what might be lost)
-
-${conversationSummary || "No significant conversation context."}
-
-## Assessment Request
-
-Is this a clean consistency boundary? If not, what are the specific concerns?`
-        }],
-        timestamp: Date.now(),
-      };
-
-      const response = await complete(
-        ctx.model!,
-        { systemPrompt: getAssessmentPrompt(action), messages: [userMessage] },
-        { apiKey, signal: loader.signal }
-      );
-
-      if (response.stopReason === "aborted") {
-        return null;
-      }
-
-      return response.content
-        .filter((c): c is { type: "text"; text: string } => c.type === "text")
-        .map((c) => c.text)
-        .join("\n");
-    };
-
-    doAssess()
-      .then(done)
-      .catch((err) => {
-        console.error("Assessment failed:", err);
-        done(`Assessment failed: ${err.message}`);
-      });
-
-    return loader;
-  });
-}
-
-function getConversationSummary(ctx: ExtensionContext): string {
+function getConversationLength(ctx: { sessionManager: { getBranch: () => Array<{ type: string }> } }): number {
   const branch = ctx.sessionManager.getBranch();
-  const messages = branch
-    .filter((entry): entry is SessionEntry & { type: "message" } => entry.type === "message")
-    .map((entry) => entry.message);
-
-  if (messages.length === 0) {
-    return "";
-  }
-
-  // Get a rough sense of conversation length and topics
-  const userMessages = messages.filter(m => m.role === "user");
-  const assistantMessages = messages.filter(m => m.role === "assistant");
-
-  return `${userMessages.length} user messages, ${assistantMessages.length} assistant responses in this session.`;
+  return branch.filter(entry => entry.type === "message").length;
 }
 
 export default function (pi: ExtensionAPI) {
+  // Track if user has been warned about concerns this session
+  let warnedAboutConcerns = false;
+
+  // Reset warning state on session start
+  pi.on("session_start", async () => {
+    warnedAboutConcerns = false;
+  });
+
   pi.on("session_before_switch", async (event, ctx) => {
     // Only intercept /new, not /resume
     if (event.reason !== "new") return;
@@ -162,52 +69,42 @@ export default function (pi: ExtensionAPI) {
     // Skip if no UI (non-interactive mode)
     if (!ctx.hasUI) return;
 
+    // If we already warned them, let it through
+    if (warnedAboutConcerns) {
+      warnedAboutConcerns = false; // Reset for next time
+      return;
+    }
+
     // Gather state
     const state = await gatherState(pi);
-    const conversationSummary = getConversationSummary(ctx);
+    const conversationLength = getConversationLength(ctx);
 
-    // Quick check: if obviously clean, don't bother with LLM assessment
-    const isObviouslyClean =
-      state.gitStatus === "No uncommitted changes." &&
-      (state.openPRs === "No open PRs." || state.openPRs.includes("Unable to check"));
-
-    if (isObviouslyClean && conversationSummary === "") {
-      // Nothing to assess, proceed
+    // Clean state and no significant conversation? Just do it.
+    if (!state.hasIssues && conversationLength < 4) {
       return;
     }
 
-    // Get LLM assessment
-    const assessment = await getAssessment(pi, ctx, state, conversationSummary, "new session");
-
-    if (assessment === null) {
-      // User cancelled during assessment
-      ctx.ui.notify("Cancelled", "info");
-      return { cancel: true };
+    // There are concerns - surface them to the conversation
+    const concerns: string[] = [];
+    if (state.gitStatus) concerns.push(state.gitStatus);
+    if (state.openPRs) concerns.push(state.openPRs);
+    if (conversationLength >= 4) {
+      concerns.push(`This session has ${conversationLength} messages — there may be context that would be lost.`);
     }
 
-    // Check if assessment indicates clean boundary
-    const lowerAssessment = assessment.toLowerCase();
-    const isClean = lowerAssessment.includes("clean consistency boundary") ||
-                    lowerAssessment.includes("looks good");
+    // Mark that we've warned them
+    warnedAboutConcerns = true;
 
-    if (isClean) {
-      // Clean boundary, proceed without confirmation
-      ctx.ui.notify("Clean boundary confirmed.", "info");
-      return;
-    }
+    // Inject the concerns into the conversation
+    const concernsText = concerns.join("\n\n");
+    pi.sendMessage({
+      customType: "consistency-boundary",
+      content: `Before you start a new session, I want to make sure we're at a clean consistency boundary.\n\n${concernsText}\n\nLet me know if you want to address any of this first, or if you're good to proceed. Run /new again when you're ready.`,
+      display: true,
+    });
 
-    // Not clean - show assessment and ask for confirmation
-    const proceed = await ctx.ui.confirm(
-      "Before you start a new session...",
-      `${assessment}\n\nStart fresh anyway?`
-    );
-
-    if (!proceed) {
-      ctx.ui.notify("Staying in current session.", "info");
-      return { cancel: true };
-    }
-
-    // User chose to proceed despite concerns
+    ctx.ui.notify("Check the conversation for details.", "info");
+    return { cancel: true };
   });
 
   // /bye command - boundary-checked exit
@@ -221,40 +118,28 @@ export default function (pi: ExtensionAPI) {
 
       // Gather state
       const state = await gatherState(pi);
-      const conversationSummary = getConversationSummary(ctx);
+      const conversationLength = getConversationLength(ctx);
 
-      // Quick check: if obviously clean, just exit
-      const isObviouslyClean =
-        state.gitStatus === "No uncommitted changes." &&
-        (state.openPRs === "No open PRs." || state.openPRs.includes("Unable to check"));
-
-      if (isObviouslyClean && conversationSummary === "") {
+      // Clean state and no significant conversation? Just exit.
+      if (!state.hasIssues && conversationLength < 4) {
         ctx.shutdown();
         return;
       }
 
-      // Get LLM assessment
-      const assessment = await getAssessment(pi, ctx, state, conversationSummary, "exit");
-
-      if (assessment === null) {
-        ctx.ui.notify("Cancelled", "info");
-        return;
+      // There are concerns - surface them
+      const concerns: string[] = [];
+      if (state.gitStatus) concerns.push(state.gitStatus);
+      if (state.openPRs) concerns.push(state.openPRs);
+      if (conversationLength >= 4) {
+        concerns.push(`This session has ${conversationLength} messages — there may be context that would be lost.`);
       }
 
-      // Check if assessment indicates clean boundary
-      const lowerAssessment = assessment.toLowerCase();
-      const isClean = lowerAssessment.includes("clean consistency boundary") ||
-                      lowerAssessment.includes("looks good");
-
-      if (isClean) {
-        ctx.shutdown();
-        return;
-      }
-
-      // Not clean - show assessment and ask for confirmation
+      const concernsText = concerns.join("\n\n");
+      
+      // For /bye, use a confirm dialog since we can't easily "try again"
       const proceed = await ctx.ui.confirm(
         "Before you go...",
-        `${assessment}\n\nExit anyway?`
+        `${concernsText}\n\nExit anyway?`
       );
 
       if (proceed) {
