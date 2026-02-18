@@ -197,7 +197,7 @@ export default function (pi: ExtensionAPI) {
 
     // Not clean - show assessment and ask for confirmation
     const proceed = await ctx.ui.confirm(
-      "Session freshness check",
+      "Before you start a new session...",
       `${assessment}\n\nStart fresh anyway?`
     );
 
