@@ -1,6 +1,6 @@
 # RFC-07: Collaboration Framework
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Created:** 2026-02-17
 - **Supersedes:** Versioning established in RFC-01, RFC-03
 
