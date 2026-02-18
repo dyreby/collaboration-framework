@@ -101,7 +101,8 @@ pi --profile code-reviewer
 
 ### Shareability
 
-Vocabulary is shareable. Like AGENTS.md explains a codebase, concepts explain how you think. Others can adopt them, request personas, or infer patterns.
+Vocabulary is shareable; the directory structure is self-documenting.
+Others can adopt concepts, request personas, or infer patterns.
 
 ### Silence as Permission
 

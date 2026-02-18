@@ -124,6 +124,21 @@ This separation matters:
 - Profiles fit runtime constraints (token limits, prompt structure)
 - When behavior is wrong, trace back: "What did I say? What got generated? Where's the gap?"
 
+### Targets
+
+Profiles are generated for specific targets, each with its own attention budget:
+
+| Target | Attention Budget |
+|--------|------------------|
+| pi, Claude Code | Token limit, system prompt placement |
+| Cursor, Windsurf | IDE context, file-aware conventions |
+| ChatGPT, Claude.ai | Session context, conversation flow |
+| human-1pager | 1 page, executive summary |
+| human-onboarding | 3-5 pages, new collaborator context |
+| human-reference | No compression, concatenate all concepts |
+
+Profiles are cross-cutting. Abstract profiles (`code-review`, `planning`) capture purpose; target profiles (`pi`, `human-1pager`) capture constraints. Compose them: `pi-code-review` = `pi` budget + `code-review` intent.
+
 ### Two Alignment Loops
 
 The authoring process is decoupled into two distinct OODA loops. Both encode intent, but from different angles.
@@ -200,27 +215,31 @@ The agent isn't following instructions. It's collaborating from a shared worldvi
 
 ### Shareability
 
-Concepts can be shared, like AGENTS.md explains a codebase.
+Concepts can be shared; the directory structure is self-documenting:
 
 ```
 .agent/
-  VOCABULARY.md        # "Here's how I work"
   concepts/
     code-reviewer.md
     defensive.md
     readable.md
     ...
+  profiles/
+    code-reviewer.md
+    ...
 ```
 
-**VOCABULARY.md** explains your concepts—their intent, how they relate, how you use them. Others can:
+Others can:
 
-- **Borrow concepts**: "John's [[defensive]] captures what I mean—I'll use it"
+- **Borrow concepts**: "John's [[defensive]] captures what I mean, I'll use it"
 - **Request a persona**: "Review my code as John's [[code-reviewer]]"
 - **Infer patterns**: An LLM can read your concepts and infer "how John works"
 
-This creates a new kind of collaboration artifact. Not just "here's my code" but "here's how I think about code."
+This creates a new kind of collaboration artifact.
+Not just "here's my code" but "here's how I think about code."
 
-The files aren't just LLM context—they're readable documentation. A human reviewing your concepts learns the same things an agent would: what you prioritize, how you want to engage, what matters to you in this context.
+The files aren't just LLM context; they're readable documentation.
+A human reviewing your concepts learns the same things an agent would: what you prioritize, how you want to engage, what matters to you in this context.
 
 ### Silence as Permission
 
@@ -427,13 +446,15 @@ This is intentional. Different users will express the same concepts differently.
 
 ### How is this different from AGENTS.md?
 
-AGENTS.md explains a codebase to agents. VOCABULARY.md explains *you* to agents (and humans).
+AGENTS.md explains a codebase to agents; it's auto-discovered.
+Profiles explain *you* to agents; they're explicitly loaded.
 
 They're complementary:
-- AGENTS.md: "Here's how this project works"
-- VOCABULARY.md: "Here's how I work"
+- AGENTS.md: "Here's how this project works" (auto-discovered)
+- Profiles: "Here's how I work" (explicitly loaded)
 
 An agent loading both understands the project *and* how you want to collaborate on it.
+The difference is the loading model: AGENTS.md is discovered; profiles are opted into.
 
 ### What about runtime interpretation?
 
