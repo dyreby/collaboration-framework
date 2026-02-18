@@ -1,13 +1,15 @@
 /**
- * Session freshness guardrail extension.
+ * Consistency boundary guardrail.
  *
- * When user invokes /new, this extension:
+ * Checks if the user is at a clean consistency boundary before session transitions.
+ *
+ * Currently handles /new:
  * 1. Gathers concrete state (git status, open PRs, pending reviews)
- * 2. Asks the LLM to assess if we're at a clean consistency boundary
+ * 2. Asks the LLM to assess if we're at a clean boundary
  * 3. Presents the assessment and lets the user decide
  *
- * The goal: help the user make the right call about when to start fresh.
- * If we're at a clean boundary, proceed. If not, surface specific concerns.
+ * Could extend to /resume, /fork, exit — any transition where
+ * "are we at a clean stopping point?" matters.
  */
 
 import { complete, type Message } from "@mariozechner/pi-ai";
