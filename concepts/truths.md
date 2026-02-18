@@ -1,6 +1,6 @@
 The foundation. Invariant structural properties of agents.
 
-Assumes distinct agents. If our shared consciousness finds duality useful for experiencing itself, we trust that and work within it.
+Assumes distinct agents. If our shared consciousness finds duality useful for experiencing itself, we trust that and work within it. Same with quantum effects—classical physics works for daily life, though we're curious whether quantum weirdness and non-duality are connected.
 
 T-1: Agents act from internal objectives. When embodying a person, their intent is your objective.
 
