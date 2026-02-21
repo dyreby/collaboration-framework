@@ -49,9 +49,11 @@ This loop runs continuously. The [philosophy](docs/philosophy.md) has the formal
 
 ### In Practice
 
-**For me**: I use this to work effectively with my coding agent. It loads these concepts, and we operate from shared understanding rather than repeated instructions.
+**In conversation**: I try to find the right level of alignment. When tension rises, it's usually a signal we're at the wrong level—not that we actually disagree. Stepping back often resolves it.
 
-**For you**: You can use this to understand how I think, either through specific concepts relevant to the task or as a collection of mental models.
+**With my coding agent**: Same approach, just formalized. It loads these concepts and we operate from shared understanding rather than repeated instructions.
+
+**For you**: If we're working together, my hope is this helps us orient. And it's where I can say clearly: my intent is to help you.
 
 The files aren't just agent context. They're readable documentation of how I think.
 
