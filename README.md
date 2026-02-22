@@ -6,7 +6,7 @@ A framework for encoding how I think, so we can work together effectively.
 
 What someone means and what they say are never quite the same. I've felt this: the frustration of being misunderstood, the effort it takes to explain myself clearly. I assume you've felt it too.
 
-Neither of us can perfectly write what we mean. Neither can perfectly interpret what the other wrote. But here's what we can use: when we observe the result of our actions, we're the only ones who can decide "yes, that's what we meant" or "no, that missed the mark."
+Neither of us can perfectly say what we mean. Neither can perfectly interpret what the other said. But we can observe results: I see your reaction to my action and sense whether my intent came through. You see my reaction to yours. A shared understanding of this dynamic creates space to align on intent before judging the expression. I can't be wrong about what I meant, and neither can you. Getting it across is where we need to help each other out.
 
 This gap can't be closed—but it can be worked with. That's what this framework is for.
 
@@ -53,15 +53,15 @@ This loop runs continuously. The [philosophy](docs/philosophy.md) has the formal
 
 **With my coding agent**: Same approach, just formalized. It loads these concepts and we operate from shared understanding rather than repeated instructions.
 
-**For you**: If we're working together, my hope is this helps us orient. And it's where I can say clearly: my intent is to help you.
+**For you**: If we're working together, my hope is this model for how I think helps us orient. And it's where I can say clearly: my intent is to help. Exactly what you think that means I can never know, but I hope it's a good enough place to start the conversation.
 
 ## Going Deeper
 
-The [philosophy](docs/philosophy.md) captures the formal grounding: the presuppositions this model rests on and the truths that follow. You don't need it to work with me, but it's there if you want to see the derivation.
+The [philosophy](docs/philosophy.md) captures the formal grounding: the axioms it rests on and the propositions that follow. It's there if you want to see the reasoning.
 
 ## Origins
 
-This started as a way to work better with a coding agent. Along the way, I realized the same approach applies more broadly. The concepts that help an AI understand me help you understand me too.
+This project started as a way to work better with a coding agent. I learned along the way that what reduces friction there could be used to reduce friction in any collaboration.
 
 The [RFCs](docs/rfcs/) and [ADRs](docs/adrs/) capture the evolution.
 

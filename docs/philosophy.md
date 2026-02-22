@@ -2,7 +2,7 @@
 
 The formal grounding for those who want it. You don't need this to collaborate effectively with me—the [README](../README.md) is self-sufficient. This is the derivation behind that story.
 
-## Presuppositions
+## Axioms
 
 A model encodes assumptions—invariants you take as given so you can reason about something more simply. The right assumptions let you create a simpler model that's actually useful. The wrong assumptions (or too many) make the model collapse under its own weight.
 
@@ -15,9 +15,9 @@ The simplest model I could find for collaboration starts here:
 
 These are models too, with their own assumptions. Non-duality questions whether distinct things exist. Quantum mechanics questions classical consistency. But you can model a pendulum without accounting for quantum physics, even though the pendulum operates in quantum reality. I'm choosing the level that lets me say something useful about collaboration, not claiming these are ultimately true.
 
-## Truths
+## Propositions
 
-From those presuppositions, six truths apply to any agent—human or AI:
+From those axioms, six propositions apply to any agent—human or AI:
 
 1. **Agents act from internal objectives.** This is intent.
 2. **Agents have internal world models** that are incomplete, fallible, and mutable.
@@ -26,9 +26,9 @@ From those presuppositions, six truths apply to any agent—human or AI:
 5. **Collaboration adds context** that agents can't derive alone, including the intent of the collaborator.
 6. **Expressed intent is lossy.** Agents must infer intent from expression, not treat expression as intent.
 
-That sixth truth is where this all leads. Words are models of concepts, and models simplify. Under the assumptions above—all the way back to distinct things existing—this necessarily follows.
+That sixth proposition is where this all leads. Words are models of concepts, and models simplify. Under the assumptions above—all the way back to distinct things existing—this necessarily follows.
 
-These aren't axioms I'm asking you to accept on faith. They're the reasoning behind the README's claims. If they ring true, the framework will make more sense. If they don't, you can still collaborate with me—you just won't have the formal grounding for why it works.
+These aren't claims I'm asking you to accept on faith. They're the reasoning behind the README's claims. If they hold up for you, the framework will make more sense. If they don't, you can still collaborate with me—you just won't have the formal grounding for why it works.
 
 ## The Loop
 
