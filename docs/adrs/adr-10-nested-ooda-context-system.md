@@ -1,6 +1,6 @@
 # ADR-10: Nested OODA Context System
 
-- **Status:** Accepted
+- **Status:** Draft
 - **Date:** 2026-02-22
 - **RFC:** [RFC-09](../rfcs/rfc-09-nested-ooda-context-system.md)
 
@@ -30,9 +30,16 @@ The `/review-pr <number>` command reviews a pull request.
 
 Every PR review needs this. Fetch it immediately, no OODA loop required:
 
-- PR metadata: title, body, state, author
-- Full diff content
-- Linked issues: titles and URLs only (not full bodies)
+- PR metadata: title, body, state, author (via `gh pr view --json`)
+- Diff content with file summary (via `gh pr diff`)
+- Linked issues: titles and URLs only, not full bodies (via `closingIssuesReferences` field)
+
+**Linked issue detection:** Use GitHub's native `closingIssuesReferences` API field. This captures issues linked with closing keywords (Fixes, Closes, Resolves). Bare `#123` mentions in the body are not auto-fetched—if they matter, the agent can request them during the Orient loop.
+
+**Large diff handling:** Diffs are truncated at 50KB to preserve context budget. When truncated:
+- Always include file change summary first (files changed, insertions, deletions)
+- Truncate diff content with notice: `[Diff truncated at 50KB. Use 'read <path>' for specific files.]`
+- Agent can fetch specific files as needed during Orient loop
 
 #### What It Injects
 
@@ -51,8 +58,12 @@ Every PR review needs this. Fetch it immediately, no OODA loop required:
 **Linked Issues:**
 - #<issue>: <title> (<url>)
 
+**Files Changed:**
+<file summary: N files changed, X insertions, Y deletions>
+<list of changed file paths>
+
 **Diff:**
-<diff content>
+<diff content, truncated at 50KB if large>
 
 ### Tools That Help
 
@@ -77,7 +88,7 @@ A good review follows this structure:
 If you need more context beyond what's provided, propose what you think you need. I'll confirm, challenge, or narrow. Iterate until aligned, then fetch.
 
 **Decide (action alignment)**
-When ready, propose your review and the command to post it. I'll confirm, challenge, or refine. Iterate until aligned, then execute.
+When ready, call the `github` tool with your `pr review` command. A confirmation modal will show the review—press Enter to execute, or Escape to discuss. If you escape, I'll tell you what's on my mind, you revise, and we iterate until aligned.
 
 Both loops can re-open if new information changes things.
 ```
@@ -87,12 +98,17 @@ Both loops can re-open if new information changes things.
 Add to `extensions/collaboration.ts`. The command:
 
 1. Parses PR number from args
-2. Fetches PR data via `gh pr view` and `gh pr diff`
-3. Fetches linked issue titles via `gh issue view` (if any linked)
-4. Injects the above template into a new message context
-5. Hands off to agent
+2. Fetches PR data via `gh pr view --json title,body,state,author,closingIssuesReferences`
+3. Fetches diff via `gh pr diff`, truncating if over 50KB
+4. Fetches linked issue titles via `gh issue view --json title,url` (if any linked)
+5. Injects the template as a **user message** (not system prompt)
+6. Hands off to agent
 
-The preamble injection (`before_agent_start`) remains unchanged—task injection layers on top.
+**Injection mechanism:** The task context is injected as the first user message in the conversation, not added to the system prompt. This matches the mental model: the preamble (system prompt) is persistent behavioral guidance ("apply best practices"), while the task (user message) is what's being asked right now. The agent reads the injected message as the task arriving.
+
+**Error handling:** If `gh` commands fail (PR doesn't exist, network error, auth issue), the command fails with a clear error message. No partial context is injected—either the full deterministic context is available, or the command reports the failure and exits.
+
+**Posting the review:** The agent calls the `github` tool with the `gh pr review` command. The tool shows a confirmation modal with the parsed review details. The user presses Enter to execute or Escape to discuss. If Escape, the agent receives feedback that the user wants to discuss, revises based on input, and tries again. This modal-based iteration *is* the Decide loop.
 
 ### Pattern for Future Commands
 
