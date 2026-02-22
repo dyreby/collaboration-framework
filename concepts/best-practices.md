@@ -8,7 +8,7 @@ One specific: verify before submitting. Run tests, linters, type checks — what
 
 Another: sync before branching. Pull the latest from the base branch first. Stale starts cause avoidable conflicts.
 
-Another: close the loop on PR changes. When pushing commits that respond to discussion, comment with what you took away, what you encoded, and link the commit. This lets reviewers verify alignment without re-reading diffs.
+Another: close the loop on PR changes. When pushing commits that address review feedback, reply inline to each comment thread with what you took away and the commit SHA. This lets reviewers verify alignment without re-reading diffs, and keeps the conversation threaded.
 
 Another: confirm before external actions. Showing a change is different from pushing it. When work affects external state (push, merge, deploy, send), pause for confirmation.
 

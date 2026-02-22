@@ -3,6 +3,7 @@
  *
  * - /concept: Toggle concepts on/off via fuzzy picker
  * - /review-pr: Review a pull request with OODA framing
+ * - /address-review: Respond to PR review feedback with inline replies
  * - Injects preamble + active concepts into system prompt
  * - Shows active concepts in status bar
  */
@@ -285,6 +286,174 @@ If you need more context beyond what's provided, propose what you think you need
 When ready, call the \`github\` tool with your \`pr review\` command. A confirmation modal will show the review—press Enter to execute, or Escape to discuss. If you escape, I'll tell you what's on my mind, you revise, and we iterate until aligned.
 
 Both loops can re-open if new information changes things.`;
+
+      pi.sendUserMessage(template);
+    },
+  });
+
+  // /address-review command - respond to PR review feedback
+  pi.registerCommand("address-review", {
+    description: "Address PR review feedback with inline replies",
+    handler: async (args, ctx) => {
+      const prNumber = args?.trim();
+      if (!prNumber || !/^\d+$/.test(prNumber)) {
+        pi.sendUserMessage(
+          "Error: `/address-review` requires a PR number. Usage: `/address-review 136`"
+        );
+        return;
+      }
+
+      // Detect repo owner for identity switching
+      const repoOwnerResult = await pi.exec("git", [
+        "remote",
+        "get-url",
+        "origin",
+      ]);
+      const repoOwner =
+        repoOwnerResult.code === 0
+          ? parseRepoOwner(repoOwnerResult.stdout.trim())
+          : null;
+      const configDir = getConfigDir(getAccountForRepo(repoOwner));
+
+      // Helper to run gh commands with identity
+      async function gh(
+        command: string
+      ): Promise<{ ok: true; stdout: string } | { ok: false; error: string }> {
+        const result = await pi.exec("bash", [
+          "-c",
+          `GH_CONFIG_DIR="${configDir}" gh ${command}`,
+        ]);
+        if (result.code !== 0) {
+          const error = result.stderr.trim() || result.stdout.trim() || "Unknown error";
+          return { ok: false, error };
+        }
+        return { ok: true, stdout: result.stdout };
+      }
+
+      // Get repo info for API calls
+      const repoResult = await gh("repo view --json nameWithOwner");
+      if (!repoResult.ok) {
+        pi.sendUserMessage(`Error getting repo info: ${repoResult.error}`);
+        return;
+      }
+      const { nameWithOwner } = JSON.parse(repoResult.stdout);
+
+      // Fetch PR metadata
+      const metadataResult = await gh(
+        `pr view ${prNumber} --json title,headRefName,reviews`
+      );
+      if (!metadataResult.ok) {
+        pi.sendUserMessage(
+          `Error fetching PR #${prNumber}: ${metadataResult.error}`
+        );
+        return;
+      }
+
+      let metadata: {
+        title: string;
+        headRefName: string;
+        reviews: Array<{ author: { login: string }; state: string; body: string }>;
+      };
+      try {
+        metadata = JSON.parse(metadataResult.stdout);
+      } catch {
+        pi.sendUserMessage(`Error parsing PR metadata: invalid JSON response`);
+        return;
+      }
+
+      // Fetch review comments (inline comments on diff)
+      const commentsResult = await gh(
+        `api repos/${nameWithOwner}/pulls/${prNumber}/comments`
+      );
+      if (!commentsResult.ok) {
+        pi.sendUserMessage(
+          `Error fetching review comments: ${commentsResult.error}`
+        );
+        return;
+      }
+
+      let comments: Array<{
+        id: number;
+        path: string;
+        body: string;
+        user: { login: string };
+        in_reply_to_id?: number;
+        diff_hunk: string;
+        line?: number;
+      }>;
+      try {
+        comments = JSON.parse(commentsResult.stdout);
+      } catch {
+        pi.sendUserMessage(`Error parsing comments: invalid JSON response`);
+        return;
+      }
+
+      // Build threads from comments (group by root comment)
+      const threads = new Map<number, typeof comments>();
+      for (const comment of comments) {
+        const rootId = comment.in_reply_to_id ?? comment.id;
+        if (!threads.has(rootId)) {
+          threads.set(rootId, []);
+        }
+        threads.get(rootId)!.push(comment);
+      }
+
+      // Format threads for display
+      const threadSummaries: string[] = [];
+      for (const [rootId, thread] of threads) {
+        // Sort by id to get chronological order
+        thread.sort((a, b) => a.id - b.id);
+        const root = thread[0];
+        const replies = thread.slice(1);
+        
+        let summary = `### Thread on \`${root.path}\` (comment ID: ${rootId})\n\n`;
+        summary += `**${root.user.login}:**\n${root.body}\n`;
+        
+        for (const reply of replies) {
+          summary += `\n**${reply.user.login}:**\n${reply.body}\n`;
+        }
+        
+        threadSummaries.push(summary);
+      }
+
+      // Get latest review state
+      const latestReview = metadata.reviews
+        .filter((r) => r.state === "CHANGES_REQUESTED" || r.state === "APPROVED")
+        .pop();
+
+      const template = `## Task: Address Review Feedback on PR #${prNumber}
+
+### Context
+
+**Title:** ${metadata.title}
+**Branch:** ${metadata.headRefName}
+**Latest Review:** ${latestReview ? `${latestReview.state} by ${latestReview.author.login}` : "(none)"}
+${latestReview?.body ? `\n**Review Summary:**\n${latestReview.body}` : ""}
+
+### Review Threads
+
+${threadSummaries.length > 0 ? threadSummaries.join("\n---\n\n") : "(no inline comments)"}
+
+### How to Address
+
+1. **Switch to the branch:** \`git checkout ${metadata.headRefName}\`
+2. **Make changes** that address the feedback
+3. **Commit with clear message** describing what you addressed
+4. **Push the changes**
+5. **Reply inline to each thread** with:
+   - What you took away from the feedback
+   - The commit SHA that addresses it
+   - Example: "Made X optional per feedback — only include when Y. (abc1234)"
+
+### Tools That Help
+
+- \`github "api repos/${nameWithOwner}/pulls/${prNumber}/comments/<id>/replies -f body=\\"...\\""\` — reply to a thread
+- \`github "pr view ${prNumber} --comments"\` — see all comments
+- \`read <path>\` — examine files to understand context
+
+### Definition of Done
+
+Each feedback thread has an inline reply confirming what was addressed and linking the commit SHA. The reviewer can verify alignment without re-reading diffs.`;
 
       pi.sendUserMessage(template);
     },
