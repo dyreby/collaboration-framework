@@ -13,7 +13,9 @@ When a concept feels right, it goes in a PR.
 The PR is the claim: this now says what I mean.
 
 **RFCs propose structural changes.**
-Changes to the framework itself (not just concepts) go through [RFCs](docs/rfcs/) first.
+Significant changes to the framework itself (not just concepts) go through [RFCs](docs/rfcs/) first, then get an [ADR](docs/adrs/) once accepted.
+
+Smaller decisions (terminology, minor adjustments) can go directly to ADR.
 
 ## Writing Style
 
