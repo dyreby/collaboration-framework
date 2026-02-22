@@ -1,6 +1,6 @@
 # RFC-09: Nested OODA Context System
 
-- **Status:** Draft
+- **Status:** Accepted
 - **Created:** 2026-02-22
 
 ## Summary
