@@ -256,6 +256,37 @@ function parseCommand(command: string): ParsedCommand {
 // Confirmation modal
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Max height for the modal content area (excluding header/footer) */
+const MAX_CONTENT_HEIGHT = 20;
+
+/**
+ * Build content lines from parsed sections.
+ */
+function buildContentLines(
+  sections: ParsedCommand["sections"],
+  innerWidth: number,
+  theme: { fg: (color: string, text: string) => string }
+): string[] {
+  const lines: string[] = [];
+
+  for (const section of sections) {
+    const label = theme.fg("muted", `${section.label}:`);
+
+    if (section.multiline) {
+      lines.push(" " + label);
+      const wrapped = wrapTextWithAnsi(section.value, innerWidth);
+      for (const line of wrapped) {
+        lines.push(" " + theme.fg("text", line));
+      }
+      lines.push("");
+    } else {
+      lines.push(" " + label + " " + theme.fg("text", section.value));
+    }
+  }
+
+  return lines;
+}
+
 /**
  * Show confirmation modal for a gh command.
  * Returns true if user confirms, false if they want to discuss.
@@ -269,10 +300,26 @@ async function showConfirmModal(
 
   return ctx.ui.custom<boolean>(
     (tui, theme, _kb, done) => {
+      let scrollOffset = 0;
+      let contentLines: string[] = [];
+      let lastWidth = 0;
+
       return {
         render(width: number): string[] {
           const lines: string[] = [];
           const innerWidth = width - 2;
+
+          // Rebuild content if width changed
+          if (width !== lastWidth) {
+            contentLines = buildContentLines(parsed.sections, innerWidth, theme);
+            lastWidth = width;
+            // Reset scroll if content shrunk
+            const maxScroll = Math.max(0, contentLines.length - MAX_CONTENT_HEIGHT);
+            scrollOffset = Math.min(scrollOffset, maxScroll);
+          }
+
+          const needsScroll = contentLines.length > MAX_CONTENT_HEIGHT;
+          const maxScroll = Math.max(0, contentLines.length - MAX_CONTENT_HEIGHT);
 
           // Top border
           lines.push(theme.fg("accent", "─".repeat(width)));
@@ -282,29 +329,34 @@ async function showConfirmModal(
           lines.push(" " + theme.fg("accent", header));
           lines.push("");
 
-          // Sections
-          for (const section of parsed.sections) {
-            const label = theme.fg("muted", `${section.label}:`);
+          // Scroll indicator (top)
+          if (needsScroll && scrollOffset > 0) {
+            lines.push(" " + theme.fg("dim", `↑ ${scrollOffset} more lines above`));
+          }
 
-            if (section.multiline) {
-              lines.push(" " + label);
-              const wrapped = wrapTextWithAnsi(section.value, innerWidth);
-              for (const line of wrapped) {
-                lines.push(" " + theme.fg("text", line));
-              }
-              lines.push("");
-            } else {
-              lines.push(" " + label + " " + theme.fg("text", section.value));
-            }
+          // Visible content
+          const visibleLines = contentLines.slice(
+            scrollOffset,
+            scrollOffset + MAX_CONTENT_HEIGHT
+          );
+          lines.push(...visibleLines);
+
+          // Scroll indicator (bottom)
+          const linesBelow = contentLines.length - scrollOffset - MAX_CONTENT_HEIGHT;
+          if (needsScroll && linesBelow > 0) {
+            lines.push(" " + theme.fg("dim", `↓ ${linesBelow} more lines below`));
           }
 
           // Footer
           lines.push("");
-          const footer =
+          let footer =
             theme.fg("success", "[Enter]") +
             theme.fg("text", " Looks good  ") +
             theme.fg("warning", "[Esc]") +
             theme.fg("text", " I have questions");
+          if (needsScroll) {
+            footer += "  " + theme.fg("dim", "[↑↓] Scroll");
+          }
           lines.push(" " + footer);
 
           // Bottom border
@@ -313,13 +365,26 @@ async function showConfirmModal(
           return lines;
         },
 
-        invalidate() {},
+        invalidate() {
+          lastWidth = 0; // Force rebuild on next render
+        },
 
         handleInput(data: string) {
           if (matchesKey(data, Key.enter)) {
             done(true);
           } else if (matchesKey(data, Key.escape)) {
             done(false);
+          } else if (matchesKey(data, Key.up)) {
+            if (scrollOffset > 0) {
+              scrollOffset--;
+              tui.requestRender();
+            }
+          } else if (matchesKey(data, Key.down)) {
+            const maxScroll = Math.max(0, contentLines.length - MAX_CONTENT_HEIGHT);
+            if (scrollOffset < maxScroll) {
+              scrollOffset++;
+              tui.requestRender();
+            }
           }
         },
       };
