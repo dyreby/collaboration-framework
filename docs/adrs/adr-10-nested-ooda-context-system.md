@@ -1,6 +1,6 @@
 # ADR-10: Nested OODA Context System
 
-- **Status:** Draft
+- **Status:** Accepted
 - **Date:** 2026-02-22
 - **RFC:** [RFC-09](../rfcs/rfc-09-nested-ooda-context-system.md)
 
