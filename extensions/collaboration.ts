@@ -276,7 +276,7 @@ A good review follows this structure:
 4. **Questions**: Things I'm curious about or want clarified (omit if none)
 5. **Nits**: Minor suggestions, take-or-leave (omit if none)
 
-Always include My Understanding and What I Like. Only include Questions and Nits if there are any.
+Always include My Understanding and What I Like. Only include Questions and Nits if there are any. Use \`###\` headers—provides structure to scan without fragmenting the flow.
 
 ### How This Goes (OODA)
 
