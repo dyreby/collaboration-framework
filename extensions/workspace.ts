@@ -2,8 +2,12 @@
  * Workspace tool for context-switching between repos.
  *
  * Opens a new tmux window in the target repo directory with status bar context,
- * then starts pi with injected context for seamless handoff.
+ * then starts pi directly as the window's shell command for a clean handoff.
  * Use this to transition from discovery (cross-repo queries) to focused work.
+ *
+ * When a workspace for the same repo is already open, creates a git worktree
+ * so each session gets its own directory and branch, with no cross-session
+ * interference.
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -34,6 +38,34 @@ function buildWindowName(owner: string, repo: string, context?: string): string 
   return context ? `${base} ${context}` : base;
 }
 
+/**
+ * Sanitize a context string into a valid worktree identifier.
+ * Strips '#', lowercases, replaces non-alphanumeric runs with '-',
+ * and trims any leading/trailing dashes.
+ */
+function sanitizeIdentifier(context: string): string {
+  return context
+    .replace(/#/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Check whether any tmux window name begins with `{owner}/{repo}`.
+ * Returns true when a parallel workspace for the same repo is already open.
+ */
+async function hasActiveWorkspace(
+  pi: ExtensionAPI,
+  owner: string,
+  repo: string,
+): Promise<boolean> {
+  const result = await pi.exec("tmux", ["list-windows", "-a", "-F", "#{window_name}"]);
+  if (result.code !== 0) return false;
+  const prefix = `${owner}/${repo}`;
+  return result.stdout.split("\n").some((line) => line.startsWith(prefix));
+}
+
 export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "workspace",
@@ -59,26 +91,26 @@ export default function (pi: ExtensionAPI) {
       }),
       thinking: Type.String({
         description:
-          'Thinking level: off, minimal, low, medium, high, xhigh. Must be explicitly provided by the user.',
+          "Thinking level: off, minimal, low, medium, high, xhigh. Must be explicitly provided by the user.",
       }),
       context: Type.Optional(
         Type.String({
           description:
             'Optional context to show in window name (e.g., "#165" for a PR, "fix-bug" for a branch)',
-        })
+        }),
       ),
       prompt: Type.Optional(
         Type.String({
           description:
             "Optional prompt to start pi with in the new window. Use this to inject context about what to work on.",
-        })
+        }),
       ),
       orient: Type.Optional(
         Type.Boolean({
           description:
             "If true, require the agent to orient and check in before starting work. " +
             "Use for open-ended or under-specified tasks where alignment on interpretation matters before tools run.",
-        })
+        }),
       ),
     }),
 
@@ -134,21 +166,117 @@ export default function (pi: ExtensionAPI) {
         };
       }
 
+      // Detect whether a parallel workspace for this repo is already open.
+      // If so, isolate this session in a git worktree so each session gets
+      // its own directory and branch.
+      let workPath = repoPath;
+      let worktreeNote = "";
+
+      const needsWorktree = await hasActiveWorkspace(pi, owner, repoName);
+
+      if (needsWorktree) {
+        // Derive a stable, filesystem-safe identifier from context.
+        const rawId = context ? sanitizeIdentifier(context) : "";
+        const identifier = rawId || `ws-${Date.now().toString(36)}`;
+
+        const worktreePath = join(REPOS_BASE, owner, `${repoName}-${identifier}`);
+        const branchName = `workspace/${identifier}`;
+
+        // Fetch the latest main so the worktree starts from a clean base.
+        const fetchResult = await pi.exec("git", [
+          "-C",
+          repoPath,
+          "fetch",
+          "origin",
+          "main",
+        ]);
+        if (fetchResult.code !== 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Failed to fetch origin/main: ${fetchResult.stderr}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        // Create the worktree on a fresh branch from origin/main.
+        const worktreeResult = await pi.exec("git", [
+          "-C",
+          repoPath,
+          "worktree",
+          "add",
+          worktreePath,
+          "-b",
+          branchName,
+          "origin/main",
+        ]);
+        if (worktreeResult.code !== 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Failed to create worktree: ${worktreeResult.stderr}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        workPath = worktreePath;
+
+        // Tell the spawned agent where it is and where the main repo lives.
+        worktreeNote =
+          `\n\n---\n` +
+          `Note: This session is in a git worktree at \`${worktreePath}\` ` +
+          `(branch \`${branchName}\`). The main repo is at \`${repoPath}\`. ` +
+          `Do all branch operations here — do not switch branches in the main repo.`;
+      }
+
       // Build window name
       const windowName = buildWindowName(owner, repoName, context);
 
-      // Open new tmux window, capturing its index for reliable pane targeting.
-      // Window names containing '#' break tmux target syntax when used with
-      // send-keys -t, so we target by index instead.
+      // Build pi invocation. Single-quote the model and thinking values;
+      // escape any embedded single quotes.
+      const escapedModel = model.replace(/'/g, "'\\''");
+      const escapedThinking = thinking.replace(/'/g, "'\\''");
+      const modelArgs = `--model '${escapedModel}' --thinking '${escapedThinking}'`;
+
+      // Build env var prefix:
+      // - PI_LOAD_ALL_CONCEPTS: signals collaboration extension to load all concepts
+      // - PI_WORKSPACE_ORIENT: signals collaboration extension to require orient check-in
+      const envVars = ["PI_LOAD_ALL_CONCEPTS=1"];
+      if (orient) envVars.push("PI_WORKSPACE_ORIENT=1");
+      const envPrefix = envVars.join(" ");
+
+      // Build the full pi command. When there is a prompt or a worktree note,
+      // write the content to a temp file and reference it via @file syntax —
+      // this avoids shell escaping issues and tmux length limits.
+      let piCommand: string;
+
+      const promptContent = (prompt ?? "") + worktreeNote;
+      if (promptContent.trim()) {
+        const promptDir = join(tmpdir(), "pi-workspace");
+        await mkdir(promptDir, { recursive: true });
+        const promptFile = join(promptDir, `${randomUUID()}.md`);
+        await writeFile(promptFile, promptContent, "utf8");
+        piCommand = `${envPrefix} pi ${modelArgs} @${promptFile}`;
+      } else {
+        piCommand = `${envPrefix} pi ${modelArgs}`;
+      }
+
+      // Open a new tmux window and pass pi as the shell command directly.
+      // This eliminates the send-keys race condition (shell not yet ready
+      // when keys are sent) and ensures the window closes cleanly when pi exits.
       const result = await pi.exec("tmux", [
         "new-window",
-        "-P",
-        "-F",
-        "#{window_index}",
         "-n",
         windowName,
         "-c",
-        repoPath,
+        workPath,
+        piCommand,
       ]);
 
       if (result.code !== 0) {
@@ -163,90 +291,19 @@ export default function (pi: ExtensionAPI) {
         };
       }
 
-      // Target the new window by index to avoid '#' interpretation in names.
-      const windowIndex = result.stdout.trim();
-      const windowTarget = `:${windowIndex}`;
-
-      // Build pi command with model and thinking args
-      const escapedModel = model.replace(/'/g, "'\\''");
-      const escapedThinking = thinking.replace(/'/g, "'\\''");
-      const modelArgs = `--model '${escapedModel}' --thinking '${escapedThinking}'`;
-
-      // Build env var prefix:
-      // - PI_LOAD_ALL_CONCEPTS: signals collaboration extension to load all concepts
-      // - PI_WORKSPACE_ORIENT: signals collaboration extension to require orient check-in
-      const envVars = ["PI_LOAD_ALL_CONCEPTS=1"];
-      if (orient) envVars.push("PI_WORKSPACE_ORIENT=1");
-      const envPrefix = envVars.join(" ");
-
-      // Start pi with context if prompt provided
-      if (prompt) {
-        // Write prompt to a temp file and pass it via @file syntax.
-        // This avoids shell escaping issues and tmux length limits when
-        // the prompt carries significant context.
-        const promptDir = join(tmpdir(), "pi-workspace");
-        await mkdir(promptDir, { recursive: true });
-        const promptFile = join(promptDir, `${randomUUID()}.md`);
-        await writeFile(promptFile, prompt, "utf8");
-
-        const piCommand = `${envPrefix} pi ${modelArgs} @${promptFile}`;
-
-        const piResult = await pi.exec("tmux", [
-          "send-keys",
-          "-t",
-          windowTarget,
-          piCommand,
-          "Enter",
-        ]);
-
-        if (piResult.code !== 0) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Opened workspace but failed to start pi: ${piResult.stderr}\nWindow: ${windowName}\nPath: ${repoPath}`,
-              },
-            ],
-          };
-        }
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Opened workspace: ${windowName}\nPath: ${repoPath}\nStarted pi with ${model} (thinking: ${thinking}).\n\nSwitch to that tmux window to continue.`,
-            },
-          ],
-        };
-      }
-
-      // No prompt — start pi with just model/thinking args
-      const piCommandNoPrompt = `${envPrefix} pi ${modelArgs}`;
-
-      const piResultNoPrompt = await pi.exec("tmux", [
-        "send-keys",
-        "-t",
-        windowTarget,
-        piCommandNoPrompt,
-        "Enter",
-      ]);
-
-      if (piResultNoPrompt.code !== 0) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Opened workspace but failed to start pi: ${piResultNoPrompt.stderr}\nWindow: ${windowName}\nPath: ${repoPath}`,
-            },
-          ],
-        };
-      }
+      const worktreeMsg = needsWorktree
+        ? `\nWorktree: ${workPath}`
+        : "";
 
       return {
         content: [
           {
             type: "text",
-            text: `Opened workspace: ${windowName}\nPath: ${repoPath}\nStarted pi with ${model} (thinking: ${thinking}).\n\nSwitch to that tmux window to continue.`,
+            text:
+              `Opened workspace: ${windowName}\n` +
+              `Path: ${workPath}${worktreeMsg}\n` +
+              `Started pi with ${model} (thinking: ${thinking}).\n\n` +
+              `Switch to that tmux window to continue.`,
           },
         ],
       };
