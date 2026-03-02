@@ -4,7 +4,9 @@ Alignment is agreement on what we're doing and why. Perfect alignment between ag
 
 ## The Structure
 
-Alignment is hierarchical: *why* → *what* → *how*. And each *how* contains its own why/what/how, all the way down.
+Alignment is hierarchical: *what* and *how*, recurring at every level. Each *how* contains its own *what* and *how*, all the way down. The *why* at any level is the *what* from the level above — look up to find it.
+
+This is the same recursive structure described in `cf:coherent-evolution`. CE gives it full treatment in the context of software; here it applies to any collaboration.
 
 At the top: a shared objective. Below that: agreement on approach. Below that: agreement on implementation. All the way down to tabs vs. spaces.
 
