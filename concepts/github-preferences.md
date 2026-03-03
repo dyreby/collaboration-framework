@@ -12,3 +12,4 @@ Preferences for GitHub operations in dyreby/* repos:
 - **Merging**: Always use squash merge (`--squash`).
 - **Body formatting**: Never use `--body` inline for `pr create` or `issue create`. Inline strings don't render `\n` as newlines and the shell interprets backticks. Always write the body to a temp file and pass `--body-file` with a path from `mktemp`.
 - **Review timing**: Don't re-request review while still iterating in conversation. The PR should reflect aligned work, not a mid-discussion snapshot.
+- **PR description structure**: Lead with **What** (the change and why it matters), then **How** (implementation approach). Additional sections below as needed (Testing, Prerequisites, etc.). This mirrors the CE *what*/*how* structure — the reader gets purpose first, detail second. Small PRs might only need What; the structure scales without imposing overhead.
